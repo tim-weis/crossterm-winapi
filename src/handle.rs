@@ -5,13 +5,21 @@ use std::ops::Deref;
 use std::ptr::null_mut;
 use std::sync::Arc;
 
-use winapi::shared::minwindef::DWORD;
-use winapi::um::{
-    fileapi::{CreateFileW, OPEN_EXISTING},
-    handleapi::{CloseHandle, INVALID_HANDLE_VALUE},
-    processenv::GetStdHandle,
-    winbase::{STD_INPUT_HANDLE, STD_OUTPUT_HANDLE},
-    winnt::{FILE_SHARE_READ, FILE_SHARE_WRITE, GENERIC_READ, GENERIC_WRITE, HANDLE},
+// use winapi::shared::minwindef::DWORD;
+// use winapi::um::{
+//     fileapi::{CreateFileW, OPEN_EXISTING},
+//     handleapi::{CloseHandle, INVALID_HANDLE_VALUE},
+//     processenv::GetStdHandle,
+//     winbase::{STD_INPUT_HANDLE, STD_OUTPUT_HANDLE},
+//     winnt::{FILE_SHARE_READ, FILE_SHARE_WRITE, GENERIC_READ, GENERIC_WRITE, HANDLE},
+// };
+use windows::Win32::{
+    Foundation::{CloseHandle, HANDLE, INVALID_HANDLE_VALUE, PWSTR},
+    Storage::FileSystem::{
+        CreateFileW, FILE_GENERIC_READ, FILE_GENERIC_WRITE, FILE_SHARE_READ, FILE_SHARE_WRITE,
+        OPEN_EXISTING,
+    },
+    System::Console::{GetStdHandle, STD_HANDLE, STD_INPUT_HANDLE, STD_OUTPUT_HANDLE},
 };
 
 use super::handle_result;
@@ -64,7 +72,7 @@ impl Drop for Inner {
     fn drop(&mut self) {
         if self.is_exclusive {
             assert!(
-                unsafe { CloseHandle(self.handle) != 0 },
+                unsafe { CloseHandle(self.handle).as_bool() },
                 "failed to close handle"
             )
         }
@@ -115,17 +123,17 @@ impl Handle {
     /// [`CreateFileW`](https://docs.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-createfilew).
     pub fn current_out_handle() -> Result<Handle> {
         let utf16: Vec<u16> = "CONOUT$\0".encode_utf16().collect();
-        let utf16_ptr: *const u16 = utf16.as_ptr();
+        let utf16_ptr: *mut u16 = utf16.as_ptr() as *mut _;
 
         let handle = handle_result(unsafe {
             CreateFileW(
-                utf16_ptr,
-                GENERIC_READ | GENERIC_WRITE,
+                PWSTR(utf16_ptr),
+                FILE_GENERIC_READ | FILE_GENERIC_WRITE,
                 FILE_SHARE_READ | FILE_SHARE_WRITE,
                 null_mut(),
                 OPEN_EXISTING,
-                0,
-                null_mut(),
+                0.into(),
+                None,
             )
         })?;
 
@@ -142,17 +150,17 @@ impl Handle {
     /// [`CreateFileW`](https://docs.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-createfilew).
     pub fn current_in_handle() -> Result<Handle> {
         let utf16: Vec<u16> = "CONIN$\0".encode_utf16().collect();
-        let utf16_ptr: *const u16 = utf16.as_ptr();
+        let utf16_ptr: *mut u16 = utf16.as_ptr() as *mut _;
 
         let handle = handle_result(unsafe {
             CreateFileW(
-                utf16_ptr,
-                GENERIC_READ | GENERIC_WRITE,
+                PWSTR(utf16_ptr),
+                FILE_GENERIC_READ | FILE_GENERIC_WRITE,
                 FILE_SHARE_READ | FILE_SHARE_WRITE,
                 null_mut(),
                 OPEN_EXISTING,
-                0,
-                null_mut(),
+                0.into(),
+                None,
             )
         })?;
 
@@ -181,7 +189,7 @@ impl Handle {
         Self::std_handle(STD_INPUT_HANDLE)
     }
 
-    fn std_handle(which_std: DWORD) -> Result<Handle> {
+    fn std_handle(which_std: STD_HANDLE) -> Result<Handle> {
         let handle = handle_result(unsafe { GetStdHandle(which_std) })?;
 
         Ok(Handle {
@@ -193,6 +201,7 @@ impl Handle {
     ///
     /// This is done by checking if the passed `HANDLE` is equal to `INVALID_HANDLE_VALUE`.
     pub fn is_valid_handle(handle: &HANDLE) -> bool {
+        // TODO: See if we can use the `windows::runtime::Handle`'s trait implementation `is_invalid()`.
         *handle != INVALID_HANDLE_VALUE
     }
 }

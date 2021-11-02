@@ -1,15 +1,15 @@
+use std::ffi::c_void;
 use std::io::{self, Result};
 use std::iter;
+use std::ptr::null_mut;
 use std::slice;
 use std::str;
 
-use winapi::ctypes::c_void;
-use winapi::shared::minwindef::DWORD;
-use winapi::shared::ntdef::NULL;
-use winapi::um::consoleapi::{GetNumberOfConsoleInputEvents, ReadConsoleInputW, WriteConsoleW};
-use winapi::um::wincon::{
+use windows::Win32::Foundation::CHAR;
+use windows::Win32::System::Console::{
     FillConsoleOutputAttribute, FillConsoleOutputCharacterA, GetLargestConsoleWindowSize,
-    SetConsoleTextAttribute, SetConsoleWindowInfo, COORD, INPUT_RECORD, SMALL_RECT,
+    GetNumberOfConsoleInputEvents, ReadConsoleInputW, SetConsoleTextAttribute,
+    SetConsoleWindowInfo, WriteConsoleW, COORD, INPUT_RECORD, SMALL_RECT,
 };
 
 use super::{result, Coord, Handle, HandleType, InputRecord, WindowPositions};
@@ -48,10 +48,6 @@ impl Console {
     /// This wraps
     /// [`SetConsoleWindowInfo`](https://docs.microsoft.com/en-us/windows/console/setconsolewindowinfo).
     pub fn set_console_info(&self, absolute: bool, rect: WindowPositions) -> Result<()> {
-        let absolute = match absolute {
-            true => 1,
-            false => 0,
-        };
         let a = SMALL_RECT::from(rect);
 
         result(unsafe { SetConsoleWindowInfo(*self.handle, absolute, &a) })?;
@@ -75,7 +71,7 @@ impl Console {
             // fill the cells in console with blanks
             FillConsoleOutputCharacterA(
                 *self.handle,
-                filling_char as i8,
+                CHAR(filling_char as u8),
                 cells_to_write,
                 COORD::from(start_location),
                 &mut chars_written,
@@ -135,7 +131,7 @@ impl Console {
         };
 
         let utf16: Vec<u16> = utf8.encode_utf16().collect();
-        let utf16_ptr: *const c_void = utf16.as_ptr() as *const _ as *const c_void;
+        let utf16_ptr: *const c_void = utf16.as_ptr() as *const c_void;
 
         let mut cells_written: u32 = 0;
 
@@ -145,7 +141,7 @@ impl Console {
                 utf16_ptr,
                 utf16.len() as u32,
                 &mut cells_written,
-                NULL,
+                null_mut(),
             )
         })?;
 
@@ -202,7 +198,7 @@ impl Console {
     /// This wraps
     /// [`GetNumberOfConsoleInputEvents`](https://docs.microsoft.com/en-us/windows/console/getnumberofconsoleinputevents).
     pub fn number_of_console_input_events(&self) -> Result<u32> {
-        let mut buf_len: DWORD = 0;
+        let mut buf_len: u32 = 0;
         result(unsafe { GetNumberOfConsoleInputEvents(*self.handle, &mut buf_len) })?;
         Ok(buf_len)
     }

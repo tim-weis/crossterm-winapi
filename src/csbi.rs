@@ -1,7 +1,6 @@
 use std::fmt;
-use std::mem::zeroed;
 
-use winapi::um::wincon::CONSOLE_SCREEN_BUFFER_INFO;
+use windows::Win32::System::Console::CONSOLE_SCREEN_BUFFER_INFO;
 
 use super::{Coord, Size, WindowPositions};
 
@@ -11,7 +10,7 @@ use super::{Coord, Size, WindowPositions};
 /// [`CONSOLE_SCREEN_BUFFER_INFO`](https://docs.microsoft.com/en-us/windows/console/console-screen-buffer-info-str).
 // TODO: replace the innards of this type with our own, more friendly types, like Coord.
 // This will obviously be a breaking change.
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct ScreenBufferInfo(pub CONSOLE_SCREEN_BUFFER_INFO);
 
 // TODO: replace this with a derive ASAP
@@ -33,7 +32,7 @@ impl fmt::Debug for ScreenBufferInfo {
 impl ScreenBufferInfo {
     /// Create a new console screen buffer without all zeroed properties.
     pub fn new() -> ScreenBufferInfo {
-        ScreenBufferInfo(unsafe { zeroed() })
+        ScreenBufferInfo(CONSOLE_SCREEN_BUFFER_INFO::default())
     }
 
     /// Get the size of the screen buffer.

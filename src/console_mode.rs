@@ -1,6 +1,14 @@
 use std::io::Result;
 
-use winapi::um::consoleapi::{GetConsoleMode, SetConsoleMode};
+pub use windows::Win32::System::Console::CONSOLE_MODE;
+
+use windows::Win32::System::Console::{
+    GetConsoleMode, SetConsoleMode, DISABLE_NEWLINE_AUTO_RETURN, ENABLE_ECHO_INPUT,
+    ENABLE_INSERT_MODE, ENABLE_LINE_INPUT, ENABLE_LVB_GRID_WORLDWIDE, ENABLE_MOUSE_INPUT,
+    ENABLE_PROCESSED_INPUT, ENABLE_PROCESSED_OUTPUT, ENABLE_QUICK_EDIT_MODE,
+    ENABLE_VIRTUAL_TERMINAL_INPUT, ENABLE_VIRTUAL_TERMINAL_PROCESSING, ENABLE_WINDOW_INPUT,
+    ENABLE_WRAP_AT_EOL_OUTPUT,
+};
 
 use super::{result, Handle, HandleType};
 
@@ -31,7 +39,7 @@ impl ConsoleMode {
     ///
     /// This wraps
     /// [`SetConsoleMode`](https://docs.microsoft.com/en-us/windows/console/setconsolemode).
-    pub fn set_mode(&self, console_mode: u32) -> Result<()> {
+    pub fn set_mode(&self, console_mode: CONSOLE_MODE) -> Result<()> {
         result(unsafe { SetConsoleMode(*self.handle, console_mode) })
     }
 
@@ -41,11 +49,36 @@ impl ConsoleMode {
     ///
     /// This wraps
     /// [`GetConsoleMode`](https://docs.microsoft.com/en-us/windows/console/getconsolemode).
-    pub fn mode(&self) -> Result<u32> {
-        let mut console_mode = 0;
+    pub fn mode(&self) -> Result<CONSOLE_MODE> {
+        let mut console_mode = CONSOLE_MODE::default();
         result(unsafe { GetConsoleMode(*self.handle, &mut console_mode) })?;
         Ok(console_mode)
     }
+
+    /// Console mode constants.
+    ///
+    /// This group of constants can be used when the console handle refers to an input handle.
+    ///
+    /// See [`GetConsoleMode`](https://docs.microsoft.com/en-us/windows/console/getconsolemode) for reference.
+    pub const ENABLE_ECHO_INPUT: CONSOLE_MODE = ENABLE_ECHO_INPUT;
+    pub const ENABLE_INSERT_MODE: CONSOLE_MODE = ENABLE_INSERT_MODE;
+    pub const ENABLE_LINE_INPUT: CONSOLE_MODE = ENABLE_LINE_INPUT;
+    pub const ENABLE_MOUSE_INPUT: CONSOLE_MODE = ENABLE_MOUSE_INPUT;
+    pub const ENABLE_PROCESSED_INPUT: CONSOLE_MODE = ENABLE_PROCESSED_INPUT;
+    pub const ENABLE_QUICK_EDIT_MODE: CONSOLE_MODE = ENABLE_QUICK_EDIT_MODE;
+    pub const ENABLE_WINDOW_INPUT: CONSOLE_MODE = ENABLE_WINDOW_INPUT;
+    pub const ENABLE_VIRTUAL_TERMINAL_INPUT: CONSOLE_MODE = ENABLE_VIRTUAL_TERMINAL_INPUT;
+
+    /// Console mode constants.
+    ///
+    /// This group of constants can be used when the console handle refers to a screen buffer handle.
+    ///
+    /// See [`GetConsoleMode`](https://docs.microsoft.com/en-us/windows/console/getconsolemode) for reference.
+    pub const ENABLE_PROCESSED_OUTPUT: CONSOLE_MODE = ENABLE_PROCESSED_OUTPUT;
+    pub const ENABLE_WRAP_AT_EOL_OUTPUT: CONSOLE_MODE = ENABLE_WRAP_AT_EOL_OUTPUT;
+    pub const ENABLE_VIRTUAL_TERMINAL_PROCESSING: CONSOLE_MODE = ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+    pub const DISABLE_NEWLINE_AUTO_RETURN: CONSOLE_MODE = DISABLE_NEWLINE_AUTO_RETURN;
+    pub const ENABLE_LVB_GRID_WORLDWIDE: CONSOLE_MODE = ENABLE_LVB_GRID_WORLDWIDE;
 }
 
 impl From<Handle> for ConsoleMode {
@@ -66,9 +99,12 @@ mod tests {
 
         let original_mode = mode.mode().unwrap();
 
-        mode.set_mode(0x0004).unwrap();
+        mode.set_mode(ConsoleMode::ENABLE_ECHO_INPUT).unwrap();
         let console_mode = mode.mode().unwrap();
-        assert_eq!(console_mode & 0x0004, mode.mode().unwrap());
+        assert_eq!(
+            console_mode & ConsoleMode::ENABLE_ECHO_INPUT,
+            mode.mode().unwrap()
+        );
 
         mode.set_mode(original_mode).unwrap();
     }

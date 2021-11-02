@@ -9,10 +9,10 @@ fn change_console_mode() -> Result<()> {
     let console_mode = ConsoleMode::new()?;
 
     // get the current console mode:
-    let _mode: u32 = console_mode.mode()?;
+    let _mode = console_mode.mode()?;
 
     // set the console mode (not sure if this is an actual value xp)
-    console_mode.set_mode(10)
+    console_mode.set_mode(ConsoleMode::ENABLE_LINE_INPUT | ConsoleMode::ENABLE_WINDOW_INPUT)
 }
 
 #[cfg(windows)]

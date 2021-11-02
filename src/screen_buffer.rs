@@ -2,17 +2,17 @@
 
 use std::io::Result;
 use std::mem::size_of;
+use std::ptr::null_mut;
 
-use winapi::{
-    shared::minwindef::TRUE,
-    shared::ntdef::NULL,
-    um::{
-        minwinbase::SECURITY_ATTRIBUTES,
-        wincon::{
+use windows::Win32::{
+    Security::SECURITY_ATTRIBUTES,
+    Storage::FileSystem::{FILE_SHARE_READ, FILE_SHARE_WRITE},
+    System::{
+        Console::{
             CreateConsoleScreenBuffer, GetConsoleScreenBufferInfo, SetConsoleActiveScreenBuffer,
             SetConsoleScreenBufferSize, CONSOLE_TEXTMODE_BUFFER, COORD,
         },
-        winnt::{FILE_SHARE_READ, FILE_SHARE_WRITE, GENERIC_READ, GENERIC_WRITE},
+        SystemServices::{GENERIC_READ, GENERIC_WRITE},
     },
 };
 
@@ -44,18 +44,18 @@ impl ScreenBuffer {
     pub fn create() -> Result<ScreenBuffer> {
         let security_attr: SECURITY_ATTRIBUTES = SECURITY_ATTRIBUTES {
             nLength: size_of::<SECURITY_ATTRIBUTES>() as u32,
-            lpSecurityDescriptor: NULL,
-            bInheritHandle: TRUE,
+            lpSecurityDescriptor: null_mut(),
+            bInheritHandle: true.into(),
         };
 
         let new_screen_buffer = handle_result(unsafe {
             CreateConsoleScreenBuffer(
                 GENERIC_READ |           // read/write access
                     GENERIC_WRITE,
-                FILE_SHARE_READ | FILE_SHARE_WRITE, // shared
-                &security_attr,                     // default security attributes
-                CONSOLE_TEXTMODE_BUFFER,            // must be TEXTMODE
-                NULL,
+                (FILE_SHARE_READ | FILE_SHARE_WRITE).0, // shared
+                &security_attr,                         // default security attributes
+                CONSOLE_TEXTMODE_BUFFER,                // must be TEXTMODE
+                null_mut(),
             )
         })?;
         Ok(ScreenBuffer {
